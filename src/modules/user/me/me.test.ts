@@ -13,11 +13,9 @@ afterAll(async () => {
   await connection.close();
 });
 
-const registerMutation = `
-  mutation Register($data: RegisterInput!) {
-    register(
-      data: $data
-    ) {
+const meQuery = `
+  {
+    me {
       id
       email
       firstName
@@ -27,33 +25,38 @@ const registerMutation = `
   }
 `;
 
-describe("Register", () => {
-  it("create user", async () => {
-    const user = {
+describe("Me", () => {
+  it("get user", async () => {
+    const user = await User.create({
       firstName: "Sean",
       lastName: "O'Hara",
-      email: "sohara@sohara.com",
+      email: "soharaz@sohara.com",
       password: "password"
-    };
+    }).save();
     const result = await gCall({
-      source: registerMutation,
-      variableValues: {
-        data: user
-      }
+      source: meQuery,
+      userId: user.id
     });
     expect(result).toMatchObject({
       data: {
-        register: {
+        me: {
+          id: `${user.id}`,
           firstName: user.firstName,
           lastName: user.lastName,
-          email: user.email,
-          name: "Sean O'Hara"
+          email: user.email
         }
       }
     });
+  });
 
-    const dbUser = await User.findOne({ where: { email: user.email } });
-    expect(dbUser).toBeDefined();
-    expect(dbUser!.email).toEqual(user.email);
+  it("return null when no user in context", async () => {
+    const result = await gCall({
+      source: meQuery
+    });
+    expect(result).toMatchObject({
+      data: {
+        me: null
+      }
+    });
   });
 });
